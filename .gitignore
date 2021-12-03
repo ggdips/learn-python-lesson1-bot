@@ -1,3 +1,6 @@
+# temp bot files
+*.temp
+
 # Sensitive config
 settings.py
 
