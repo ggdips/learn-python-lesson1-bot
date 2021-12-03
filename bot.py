@@ -3,7 +3,8 @@ import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import settings
 import ephem
-from datetime import date
+from datetime import date, datetime
+import re
 
 logging.basicConfig(filename='bot.log', level=logging.INFO)
 
@@ -24,11 +25,35 @@ def where_is_planet(update, context):
     constellation = ephem.constellation(p(date.today()))
     update.message.reply_text(f'{planet} in {constellation[1]}')
 
+def check_word_count(update, context):
+    user_text = update.message.text.replace('/wordcount','',1)
+    user_text = re.sub(r"[^a-zA-Zа-яА-Я_]+$","",user_text)
+    wcount = len(user_text.split())
+    if wcount == 0:
+        update.message.reply_text('В запросе должно быть минимум одно слово на русском или английском языке')
+        return
+    logging.info(user_text)
+    update.message.reply_text(f'Количество слов: {wcount}')
+
+def get_next_full_moon(update, context):
+    logging.info('Вызван /next_full_moon')
+    input_date = update.message.text.split()[1]
+    try:
+        input_ddate = datetime.strptime(input_date, '%Y-%m-%d')
+    except:
+        update.message.reply_text('В запросе должна быть указана дата в формате %Y-%m-%d, например /next_full_moon 2019-01-01')
+        return
+    next_date = ephem.next_full_moon(input_ddate)
+    update.message.reply_text(f'Следующее полнолуние in {next_date}')
+
+
 def main():
     mybot = Updater(settings.API_KEY, use_context=True)
     dp = mybot.dispatcher
     dp.add_handler(CommandHandler("start", greet_user))
     dp.add_handler(CommandHandler("planet", where_is_planet))
+    dp.add_handler(CommandHandler("wordcount", check_word_count))
+    dp.add_handler(CommandHandler("next_full_moon", get_next_full_moon))
     dp.add_handler(MessageHandler(Filters.text, talk_to_me))
     logging.info("Бот стартовал")
     mybot.start_polling()
